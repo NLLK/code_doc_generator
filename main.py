@@ -9,13 +9,14 @@ class Settings:
     parser = argparse.ArgumentParser()
 
     inputPath = os.path.abspath(os.getcwd())
-    outputFile = './code.txt'
+    outputFile = 'code.txt'
     ignorePaths = []
     ignorePaths_ready = []
     
     extentions_pack = None
 
     file_extensions = ['.c', '.h', '.py']
+    file_codec = "utf-8"
 
     def init_arguments(self):
         self.parser.add_argument('-i', '--inputPath',       
@@ -32,6 +33,10 @@ class Settings:
         
         self.parser.add_argument('-d', '--ignorePaths', nargs='+',  
             help= f'A list of folders to ingore. Ex: \"-d \"./Debug\"\" Default = {self.ignorePaths}')
+
+        self.parser.add_argument('-c', '--encoding',  
+            help= f'File codec. Default = {self.file_codec}')
+
 
         pass
 
@@ -56,6 +61,9 @@ class Settings:
             elif "simpleCpp" in args.fileExtentionPack:
                 self.file_extensions = FileExtentionPack.simpleCpp
                 self.extentions_pack = args.fileExtentionPack
+
+        if args.encoding:
+            self.file_codec = args.encoding
 
         pass
 
@@ -95,18 +103,19 @@ class MainFunctionality:
             pathName = folderPath + "/" + dirElement
             #check if it file or folder. if file - write down file content
             if os.path.isfile(pathName):
-                self.readFile(pathName, dirElement)
+                rel_path = os.path.relpath(pathName, self.settings.inputPath)
+                self.readFile(pathName, rel_path)
             #if folder - run this method again
             else: self.readFolder(pathName)
 
         pass
 
     def readFile(self, filePath, place_in_folder):
-
         if not self.apply_filters_on_file(filePath): return
 
-        file = open(filePath,'r', encoding="utf-8")
+        file = open(filePath,'r', encoding = self.settings.file_codec)
         
+        #file name header
         self.outputFileDesc.write('\n'+'Имя файла: '+place_in_folder + '\n'+'\n')
 
         for line in file:
@@ -116,7 +125,7 @@ class MainFunctionality:
     def apply_filters_on_file(self, filePath):
         filename, file_extension = os.path.splitext(filePath)
 
-        if file_extension in settings.file_extensions:
+        if file_extension in self.settings.file_extensions:
             #dont include this file in listing
             if os.path.abspath(__file__) == filePath: return False 
             return True
