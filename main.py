@@ -1,13 +1,20 @@
 import os
 import argparse
 
+class FileExtentionPack:
+    qtQml = ['.c', '.cpp', '.h', '.pro', '.qrc', '.qml', '.js']
+    simpleCpp = ['.c', '.cpp', '.h']
+
 class Settings:
     parser = argparse.ArgumentParser()
 
     inputPath = os.path.abspath(os.getcwd())
     outputFile = './code.txt'
     ignorePaths = []
+    ignorePaths_ready = []
     
+    extentions_pack = None
+
     file_extensions = ['.c', '.h', '.py']
 
     def init_arguments(self):
@@ -17,8 +24,11 @@ class Settings:
         self.parser.add_argument('-o', '--outputFile',      
             help= f'Full file path for output file. Default = {self.outputFile}')
         
-        self.parser.add_argument('-e', '--fileExtentions', nargs='+',  
+        self.parser.add_argument('-e', '--fileExtentions', nargs='*',  
             help= f'A list of file extentions. Ex: \"-e \'.c\' \'.cpp\' \'.h\'\". Default = {self.file_extensions}')
+        
+        self.parser.add_argument('-p', '--fileExtentionPack', 
+            help= f'Predefined list of file extentions. Variants: qtQml, simpleCpp')
         
         self.parser.add_argument('-d', '--ignorePaths', nargs='+',  
             help= f'A list of folders to ingore. Ex: \"-d \"./Debug\"\" Default = {self.ignorePaths}')
@@ -38,11 +48,30 @@ class Settings:
 
         if args.ignorePaths:
             self.ignorePaths = args.ignorePaths
+
+        if args.fileExtentionPack:
+            if "qtQml" in args.fileExtentionPack :
+                self.file_extensions = FileExtentionPack.qtQml
+                self.extentions_pack = args.fileExtentionPack
+            elif "simpleCpp" in args.fileExtentionPack:
+                self.file_extensions = FileExtentionPack.simpleCpp
+                self.extentions_pack = args.fileExtentionPack
+
+        pass
+
+    def precompile_ignore_paths(self):
+        for pathEl in self.ignorePaths:
+            if "~" in pathEl:
+                path = os.path.expanduser(pathEl)
+            else:
+                path = os.path.abspath(pathEl)
+            self.ignorePaths_ready.append(path)
         pass
 
     def __init__(self) -> None:
         self.init_arguments()
         self.parse_arguments()
+        self.precompile_ignore_paths()
 
 class MainFunctionality:
     def __init__(self, settings, outputFileDesc):
@@ -54,6 +83,9 @@ class MainFunctionality:
         self.readFolder(settings.inputPath)
 
     def readFolder(self, folderPath):
+
+        if  not self.apply_filters_on_folder(folderPath): return
+
         #get folder content
         folderContent = os.listdir(folderPath)
 
@@ -85,12 +117,18 @@ class MainFunctionality:
         filename, file_extension = os.path.splitext(filePath)
 
         if file_extension in settings.file_extensions:
+            #dont include this file in listing
+            if os.path.abspath(__file__) == filePath: return False 
             return True
         
         return False
     
     def apply_filters_on_folder(self, folderPath):
-        pass
+
+        if folderPath in self.settings.ignorePaths_ready:
+            return False
+
+        return True
 
 
 #entry point of app
@@ -98,8 +136,14 @@ if __name__ == "__main__":
 
     settings = Settings()
     print("Settings: ")
-    print("inputPath:", settings.inputPath, "\nfileExtentions:", settings.file_extensions, 
-          "\noutputFile:", settings.outputFile, "\nignorePaths:", settings.ignorePaths)
+    print("inputPath:", settings.inputPath)
+    print("fileExtentions:", settings.file_extensions)
+    
+    if settings.extentions_pack:
+        print("extentionsPack:",settings.extentions_pack)
+
+    print("outputFile:", settings.outputFile)
+    print("ignorePaths:", settings.ignorePaths)
 
     _outputFile = open(settings.outputFile,'w')
 
