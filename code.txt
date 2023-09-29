@@ -1,0 +1,2929 @@
+
+Имя файла: Utils.h
+
+#ifndef UTILS_H
+#define UTILS_H
+
+#include <QString>
+#include <QList>
+#include <QVariant>
+#include <QDate>
+#include <QDateTime>
+#include <QTextCodec>
+
+#include <QRandomGenerator>
+
+class Utils
+{
+public:
+    static QString qListOfStringsToString(QList<QString> list, QString separator);
+    static QVariantList qStringListToQVariantList(QStringList list);
+    static QString ymdTodmyFormatString(QString date);
+    static QString epochTodmyFormatString(uint epoch);
+    static uint64_t dmyToEpochFormatString(QString str);
+    static QString dmyToymdFormatString(QString date);
+    static QByteArray utf8StringTo1251Array(QString str);
+
+    static int findKeyByValueInHash(QHash<int, QByteArray> hash, int from, int to, QString value);
+
+    static bool checkModbusValue(int value);
+    static QString generateLoraKey(int number);
+    static QString generateLoraDevAddress();
+
+    static QString stripString(QString string, int max_length);
+    static QString backendTimeMksToReaderTime(QString b_time);
+    static QString backendTimeToReaderTime(QString b_time);
+    static QString backendCowDateToReaderDate(QString b_date);
+    static QString readerTimeToBackendTime(QString r_time);
+
+    static QVariantMap getBlankDataForMapping(QHash<int, QByteArray> m_mapping);
+
+    static QVariantMap combineMaps(QVariantMap into, QVariantMap from);
+};
+
+#endif // UTILS_H
+
+Имя файла: MPCPageController.h
+
+#ifndef MPCPAGECONTROLLER_H
+#define MPCPAGECONTROLLER_H
+
+#include <QObject>
+#include <QVariant>
+
+#include <Application/ViewController/MPC/MPCPageFacade.h>
+class MPCPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MPCPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap wsSettings READ wsSettings WRITE setWsSettings NOTIFY wsSettingsChanged)
+
+    Q_INVOKABLE void sendMPCParameters(QVariantList parameters, int pageType);
+    Q_INVOKABLE void sendDataWsSettings();
+
+    QVariantMap wsSettings() const;
+    void setWsSettings(const QVariantMap &newWsSettings);
+
+signals:
+    void wsSettingsChanged();
+
+private:
+    MPCPageFacade facade;
+    QVariantMap m_wsSettings;
+    SettingsManager* m_settings = PointersProvider::getSettingsManager();
+    int m_settings_type = SettingsManager::DeviceTypes::MPC;
+};
+
+#endif // MPCPAGECONTROLLER_H
+
+Имя файла: MPCPageFacade.h
+
+#ifndef MPCPAGEFACADE_H
+#define MPCPAGEFACADE_H
+
+#include <QObject>
+#include <QVariant>
+
+#include <Application/Model/Constants/MPCDataConstants.h>
+
+#include <Application/PointersProvider.h>
+
+class MPCPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MPCPageFacade(QObject *parent = nullptr);
+    void sendData(QVariantList data, MPCPageType pageType);
+    void sendWsSettings(QVariantMap data);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+
+};
+
+#endif // MPCPAGEFACADE_H
+
+Имя файла: BaseStationPageFacade.h
+
+#ifndef BASESTATIONPAGEFACADE_H
+#define BASESTATIONPAGEFACADE_H
+
+#include <QObject>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+
+#include <Application/Model/LoraDeviceModel.h>
+#include <Application/Model/Constants/ActionResultTypes.h>
+
+#include <Application/PointersProvider.h>
+
+class BaseStationPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit BaseStationPageFacade(QObject *parent = nullptr);
+
+    void refreshDeviceList();
+    void addDevice(QVariantMap data);
+    void addConfigDevice();
+
+
+    void editDevice(QVariantMap data);
+    void editDeviceSettings(QVariantMap data);
+    void updateDeviceData(QString devEui);
+    void gotData(QJsonDocument jDocData);
+    void removeDevice(QVariantMap device);
+    void setDeviceTime(QVariantMap data);
+
+private:
+    DriverWebsocket* m_ws = PointersProvider::getDriverWebsocket();
+
+signals:
+    void requestDeviceList();
+    void gotDataDeviceList(QList<QVariantMap> list);
+    void updateDevice(QVariantMap data);
+    void deviceUpdated();
+    void actionGotResult(QVariantMap result);
+
+private slots:
+    void onGotData(QString message);
+};
+
+#endif // BASESTATIONPAGEFACADE_H
+
+Имя файла: BaseStationPageController.h
+
+#ifndef BASESTATIONPAGECONTROLLER_H
+#define BASESTATIONPAGECONTROLLER_H
+
+#include <QObject>
+#include <QSortFilterProxyModel>
+
+#include <Application/Model/LoraDeviceModel.h>
+#include <Application/Model/LoraDeviceProxyModel.h>
+#include <Application/ViewController/BaseStation/BaseStationPageFacade.h>
+#include <Application/Model/Constants/ActionResultTypes.h>
+#include <Application/Utils.h>
+
+class BaseStationPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit BaseStationPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(LoraDeviceModel* model READ model CONSTANT)
+    Q_PROPERTY(LoraDeviceProxyModel* proxyModel READ proxyModel CONSTANT)
+    Q_PROPERTY(QString searchString READ searchString WRITE setSearchString NOTIFY searchStringChanged)
+
+    LoraDeviceModel *model() const;
+
+    Q_INVOKABLE void removeDevice(QString devEui);
+    Q_INVOKABLE void addDevice(QVariantMap data);
+    Q_INVOKABLE void editDevice(QVariantMap data);
+    Q_INVOKABLE void editDeviceSettings(QVariantMap data);
+    Q_INVOKABLE void updateDeviceData(QString devEui);
+    Q_INVOKABLE void refreshDeviceList();
+    Q_INVOKABLE void setDeviceTime(QVariantMap data);
+    Q_INVOKABLE static QString generateLoraKey(int number);
+    Q_INVOKABLE static QString generateLoraDevAddress();
+
+    LoraDeviceProxyModel *proxyModel() const;
+
+    QString searchString() const;
+    void setSearchString(const QString &newSearchString);
+
+private:
+    BaseStationPageFacade facade;
+    LoraDeviceModel *m_model = new LoraDeviceModel;
+
+    LoraDeviceProxyModel *m_proxyModel = nullptr;
+
+    QString m_searchString;
+
+private slots:
+    void gotDataDeviceList(QList<QVariantMap> list);
+    void updateDevice(QVariantMap data);
+    void deviceUpdatedHandler();
+    void onFacadeActionGotResult(QVariantMap result);
+
+signals:
+    void actionGotResult(QVariantMap result);
+    void deviceUpdated();
+
+    void searchStringChanged();
+};
+
+#endif // BASESTATIONPAGECONTROLLER_H
+
+Имя файла: DoubleValvePageController.h
+
+#ifndef DOUBLEVALVEPAGECONTROLLER_H
+#define DOUBLEVALVEPAGECONTROLLER_H
+
+#include <QObject>
+#include <QVariantList>
+#include <Application/ViewController/DoubleValve/DoubleValvePageFacade.h>
+
+class DoubleValvePageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit DoubleValvePageController(QObject *parent = nullptr);
+
+    Q_INVOKABLE void sendDataDoubleValve(QVariantList data);
+
+private:
+    DoubleValvePageFacade facade;
+};
+
+#endif // DOUBLEVALVEPAGECONTROLLER_H
+
+Имя файла: DoubleValvePageFacade.h
+
+#ifndef DOUBLEVALVEPAGEFACADE_H
+#define DOUBLEVALVEPAGEFACADE_H
+
+#include <QObject>
+#include <Application/PointersProvider.h>
+class DoubleValvePageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit DoubleValvePageFacade(QObject *parent = nullptr);
+    void sendDataDoubleValve(bool data[2]);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+};
+
+#endif // DOUBLEVALVEPAGEFACADE_H
+
+Имя файла: ElectricDevicesControllerPageFacade.h
+
+#ifndef ELECTRICDEVICESCONTROLLERPAGEFACADE_H
+#define ELECTRICDEVICESCONTROLLERPAGEFACADE_H
+
+#include <QObject>
+#include <QVariantMap>
+
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+#include <Application/PointersProvider.h>
+
+class ElectricDevicesControllerPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ElectricDevicesControllerPageFacade(QObject *parent = nullptr);
+    void sendData(QVariantMap data);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+};
+
+#endif // ELECTRICDEVICESCONTROLLERPAGEFACADE_H
+
+Имя файла: ElectricDevicesControllerPageController.h
+
+#ifndef ELECTRICDEVICESCONTROLLERPAGECONTROLLER_H
+#define ELECTRICDEVICESCONTROLLERPAGECONTROLLER_H
+
+#include <QObject>
+#include <Application/ViewController/ElectricDevicesController/ElectricDevicesControllerPageFacade.h>
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+
+class ElectricDevicesControllerPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ElectricDevicesControllerPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap data READ data WRITE setData NOTIFY dataChanged)
+
+    QVariantMap data() const;
+    void setData(const QVariantMap &newData);
+
+    Q_INVOKABLE void sendDataEDC();
+
+signals:
+
+    void dataChanged();
+private:
+    ElectricDevicesControllerPageFacade facade;
+    QVariantMap m_data;
+    SettingsManager* m_settings = PointersProvider::getSettingsManager();
+    int m_settings_type = SettingsManager::DeviceTypes::EDC;
+};
+
+#endif // ELECTRICDEVICESCONTROLLERPAGECONTROLLER_H
+
+Имя файла: MilkMeterPageController.h
+
+#ifndef MILKMETERPAGECONTROLLER_H
+#define MILKMETERPAGECONTROLLER_H
+
+#include <QObject>
+
+#include <Application/ViewController/MilkMeter/MilkMeterPageFacade.h>
+#include <Application/Model/Constants/MilkMeterDataConstants.h>
+
+#include <QDebug>
+#include <Application/Utils.h>
+
+class MilkMeterPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkMeterPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap dataMilkMeter READ dataMilkMeter WRITE setDataMilkMeter NOTIFY dataMilkMeterChanged)
+
+    QVariantMap dataMilkMeter() const;
+    void setDataMilkMeter(const QVariantMap &newDataMilkMeter);
+
+signals:
+    void dataMilkMeterChanged();
+
+private slots:
+    void gotDataMilkMeter(QVariantMap map);
+
+private:
+    MilkMeterPageFacade facade;
+    QVariantMap m_dataMilkMeter;
+};
+
+#endif // MILKMETERPAGECONTROLLER_H
+
+Имя файла: MilkMeterPageFacade.h
+
+#ifndef MILKMETERPAGEFACADE_H
+#define MILKMETERPAGEFACADE_H
+
+#include <QVariantMap>
+
+#include <Application/PointersProvider.h>
+
+class MilkMeterPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkMeterPageFacade(QObject *parent = nullptr);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+
+signals:
+    void gotDataMilkMeter(QVariantMap map);
+
+private slots:
+    void gotData(QString data);
+};
+
+#endif // MILKMETERPAGEFACADE_H
+
+Имя файла: ReaderCowTabFacade.h
+
+#ifndef READERCOWTABFACADE_H
+#define READERCOWTABFACADE_H
+
+#include <QObject>
+#include <QVariant>
+
+#include <Application/PointersProvider.h>
+#include <Application/ViewController/ReaderPortable/SerialGettingFSM.h>
+#include <Application/ViewController/ReaderPortable/SerialSendingFSM.h>
+
+#include <Application/Model/Data/ReaderEntities/Cow.h>
+#include <Application/Model/Data/ReaderEntities/TableRows.h>
+
+class ReaderCowTabFacade : public QObject
+{
+    Q_OBJECT
+public:    
+    explicit ReaderCowTabFacade(QObject *parent = nullptr);
+
+    void updateBackendModel();
+    void updateReaderModel();
+
+    void setGettingDataState(bool state);
+
+    void sendDataToReader(QList<QVariantMap> data);
+    void sendDataToBackend(QList<QVariantMap> data);
+
+private:
+    DriverWebsocket* m_ws = PointersProvider::getDriverWebsocket();
+    DriverSerial* m_serial = PointersProvider::getDriverSerial();
+
+    SerialGettingFSM m_fsm;
+    SerialSendingFSM m_fsmSending;
+
+    bool m_gettingDataState;
+
+    QList<QVariantMap> m_dataToSend;
+
+    void sendTable(ReaderPortableTableType table);
+
+private slots:
+    void onWebSocketGotData(QString data);
+    void onSerialGotData(QString data);
+
+signals:
+    void gotBackendData(QList<QVariantMap> data);
+    void gotReaderData(QList<QVariantMap> data);
+    void gotReaderSignleData(QVariantMap data);
+};
+
+#endif // READERCOWTABFACADE_H
+
+Имя файла: SerialGettingFSM.h
+
+#ifndef SERIALGETTINGFSM_H
+#define SERIALGETTINGFSM_H
+
+#include <QObject>
+#include <QDebug>
+
+#include <Application/Driver/DriverSerial.h>
+#include <Application/Model/Constants/ReaderPortableTableTypes.h>
+#include <Application/Driver/CommandsGenerator.h>
+
+class SerialGettingFSM : public QObject
+{
+    Q_OBJECT
+public:
+    explicit SerialGettingFSM(QObject *parent = nullptr);
+
+    enum class State{
+        Idle = 0,
+        GotRows = 1,
+        GotData = 2,
+        Error = - 1
+    };
+    Q_ENUM(State)
+
+    void setDriver(DriverSerial* driver);
+
+    void getTable(ReaderPortableTableType tableType); //getting number of rows
+    void onGotTableRowNumber(ReaderPortableTableType table_type, int number); //slot to know
+        //when facade got table row number
+
+    void onGotTableRow();   //slot to know when facade got table row
+
+    void setState(State state);
+
+private:
+    void getTableRow(); //getting table data
+    void clearMembers(); //clear variables
+
+private:
+    DriverSerial* m_driver;
+
+    State m_state = State::Idle;
+
+    ReaderPortableTableType m_gettingTable;
+    int m_row_number = 0;
+    int m_current_index = 0;
+
+signals:
+    void stateChanged(SerialGettingFSM::State state);
+};
+
+#endif // SERIALGETTINGFSM_H
+
+Имя файла: SerialSendingFSM.h
+
+#ifndef SERIALSENDINGFSM_H
+#define SERIALSENDINGFSM_H
+
+#include <QObject>
+#include <QVariantMap>
+
+#include <QDebug>
+
+#include <Application/Driver/DriverSerial.h>
+#include <Application/Model/Constants/ReaderPortableTableTypes.h>
+#include <Application/Driver/CommandsGenerator.h>
+
+#include <Application/Model/Constants/ReaderPortableTableTypes.h>
+
+class SerialSendingFSM : public QObject
+{
+    Q_OBJECT
+public:
+    explicit SerialSendingFSM(QObject *parent = nullptr);
+
+    enum class State{
+        Idle = 0,
+        FinishSending = 1,
+        Error = - 1
+    };
+    Q_ENUM(State)
+
+    void setDriver(DriverSerial* driver);
+
+    void sendTable(ReaderPortableTableType table, QList<QVariantMap> data);
+
+    void onGotTableSendStatus(bool status);
+
+private:
+    void sendRow();
+
+    void setState(State state);
+
+    void clearMembers();
+
+private:
+    DriverSerial* m_driver;
+
+    State m_state = State::Idle;
+
+    int m_currentIndex = 0;
+    ReaderPortableTableType m_table;
+    QList<QVariantMap> m_data;
+
+signals:
+    void stateChanged(SerialSendingFSM::State state);
+};
+
+#endif // SERIALSENDINGFSM_H
+
+Имя файла: ReaderCowTabController.h
+
+#ifndef READERCOWTABCONTROLLER_H
+#define READERCOWTABCONTROLLER_H
+
+#include <QObject>
+
+#include <Application/Model/Data/TableModels/CowModel.h>
+#include <Application/Model/Data/TableModels/CowProxyModel.h>
+
+#include <Application/ViewController/ReaderPortable/ReaderCowTabFacade.h>
+class ReaderCowTabController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ReaderCowTabController(QObject *parent = nullptr);
+
+    Q_PROPERTY(CowProxyModel* readerModel READ readerModel CONSTANT)
+    Q_PROPERTY(CowProxyModel* backendModel READ backendModel CONSTANT)
+//    Q_PROPERTY(int currentReaderTab READ currentReaderTab WRITE setCurrentReaderTab NOTIFY currentReaderTabChanged)
+
+    CowProxyModel *readerModel();
+    CowProxyModel *backendModel();
+
+    Q_INVOKABLE void updateBackendModel();
+    Q_INVOKABLE void updateReaderModel();
+
+    Q_INVOKABLE void setPageLoadState(bool state);
+
+    Q_INVOKABLE void sendDataFromBackend();
+    Q_INVOKABLE void sendDataFromReader();
+
+private:
+    CowModel* m_readerModel = new CowModel;
+    CowProxyModel* m_readerProxyModel;
+
+    CowModel* m_backendModel = new CowModel;
+    CowProxyModel* m_backendProxyModel;
+
+    ReaderCowTabFacade facade;
+
+private slots:
+    void onGotBackendData(QList<QVariantMap> data);
+    void onGotReaderData(QList<QVariantMap> data);
+    void onGotReaderSignleData(QVariantMap data);
+
+};
+
+#endif // READERCOWTABCONTROLLER_H
+
+Имя файла: ReaderTaskTabFacade.h
+
+#ifndef READERTASKTABFACADE_H
+#define READERTASKTABFACADE_H
+
+#include <QObject>
+#include <QVariant>
+
+#include <Application/PointersProvider.h>
+#include <Application/ViewController/ReaderPortable/SerialGettingFSM.h>
+#include <Application/ViewController/ReaderPortable/SerialSendingFSM.h>
+
+#include <Application/Model/Data/ReaderEntities/Task.h>
+#include <Application/Model/Data/ReaderEntities/TableRows.h>
+
+class ReaderTaskTabFacade : public QObject
+{
+    Q_OBJECT
+public:
+
+    enum class SelfState{
+        Idle = 0,
+        //getting info
+        GotTaskTable,
+        GotDescriptorTable,
+
+        //sending info
+        SentTasks,
+        SentDescriptors,
+        SentTasksVaccination,
+        SentTasksInsemination,
+        SentTasksChangeLocation,
+        SentVaccines,
+        SentLocations,
+        SentCows
+    };
+
+    explicit ReaderTaskTabFacade(QObject *parent = nullptr);
+
+    void updateBackendModel();
+    void updateReaderModel();
+
+    void setGettingDataState(bool state);
+
+    void sendDataToReader(QList<QVariantMap> data);
+    void sendDataToBackend(QList<QVariantMap> data);
+
+private:
+    DriverWebsocket* m_ws = PointersProvider::getDriverWebsocket();
+    DriverSerial* m_serial = PointersProvider::getDriverSerial();
+
+    SerialGettingFSM m_fsm;
+    SerialSendingFSM m_fsmSending;
+    SelfState m_selfState = SelfState::Idle;
+
+    bool m_gettingDataState;
+
+    QList<QVariantMap> m_dataToSend;
+
+    void setSelfState(SelfState newState);
+
+    void getTable(ReaderPortableTableType table);
+    void sendTable(ReaderPortableTableType table);
+
+private slots:
+    void onWebSocketGotData(QString data);
+    void onSerialGotData(QString data);
+    void onFsmStateChanged(SerialGettingFSM::State state);
+    void onFsmSendingStateChanged(SerialSendingFSM::State state);
+
+signals:
+    void gotBackendData(QList<QVariantMap> data);
+    void gotReaderData(QList<QVariantMap> data);
+    void gotReaderSingleDataPartition(QVariantMap data, ReaderPortableTableType tableType);
+};
+
+#endif // READERTASKTABFACADE_H
+
+Имя файла: ReaderTaskTabController.h
+
+#ifndef READERTASKTABCONTROLLER_H
+#define READERTASKTABCONTROLLER_H
+
+#include <QObject>
+
+#include <Application/ViewController/ReaderPortable/ReaderTaskTabFacade.h>
+
+#include <Application/Model/Data/TableModels/TaskProxyModel.h>
+#include <Application/Model/Data/TableModels/TaskModel.h>
+
+class ReaderTaskTabController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ReaderTaskTabController(QObject *parent = nullptr);
+
+    Q_PROPERTY(TaskProxyModel* readerModel READ readerModel CONSTANT)
+    Q_PROPERTY(TaskProxyModel* backendModel READ backendModel CONSTANT)
+
+    TaskProxyModel *readerModel() const;
+    TaskProxyModel *backendModel() const;
+
+    Q_INVOKABLE void updateBackendModel();
+    Q_INVOKABLE void updateReaderModel();
+
+    Q_INVOKABLE void setPageLoadState(bool state);
+
+    Q_INVOKABLE void sendDataFromBackend();
+    Q_INVOKABLE void sendDataFromReader();
+
+    Q_INVOKABLE void changeDescriptorStatus(int task_id, int desc_id, bool status);
+
+private:
+
+    void syncronizeDescriptorDataReader(QVariantMap descData);
+
+private:
+    TaskModel* m_readerModel = new TaskModel;
+    TaskProxyModel* m_readerProxyModel;
+
+    TaskModel* m_backendModel = new TaskModel;
+    TaskProxyModel* m_backendProxyModel;
+
+    ReaderTaskTabFacade facade;
+
+private slots:
+    void onGotBackendData(QList<QVariantMap> data);
+    void onGotReaderSingleDataPartition(QVariantMap data, ReaderPortableTableType tableType);
+};
+
+#endif // READERTASKTABCONTROLLER_H
+
+Имя файла: MilkStreamSensorController.h
+
+#ifndef MILKSTREAMSENSORCONTROLLER_H
+#define MILKSTREAMSENSORCONTROLLER_H
+
+#include <QObject>
+
+#include <Application/ViewController/MilkStreamSensor/MilkStreamSensorFacade.h>
+#include <Application/Model/Constants/MilkStreamSensorDataConstants.h>
+
+#include <QDebug>
+#include <Application/Utils.h>
+
+class MilkStreamSensorController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkStreamSensorController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap dataMilkStream READ dataMilkStream WRITE setDataMilkStream NOTIFY dataMilkStreamChanged)
+
+    QVariantMap dataMilkStream() const;
+    void setDataMilkStream(const QVariantMap &newDataMilkStream);
+
+signals:
+    void dataMilkStreamChanged();
+
+private slots:
+    void gotDataMilkStreamSensor(QVariantMap map);
+
+private:
+    MilkStreamSensorFacade facade;
+    QVariantMap m_dataMilkStream;
+};
+
+#endif // MILKSTREAMSENSORCONTROLLER_H
+
+Имя файла: MilkStreamSensorFacade.h
+
+#ifndef MILKSTREAMSENSORFACADE_H
+#define MILKSTREAMSENSORFACADE_H
+
+#include <QVariantMap>
+
+#include <Application/PointersProvider.h>
+
+class MilkStreamSensorFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkStreamSensorFacade(QObject *parent = nullptr);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+
+signals:
+    void gotDataMilkStreamSensor(QVariantMap map);
+
+private slots:
+    void gotData(QString data);
+};
+
+#endif // MILKSTREAMSENSORFACADE_H
+
+Имя файла: MicrowaveAntennaControlUnitController.h
+
+#ifndef MICROWAVEANTENNACONTROLUNITCONTROLLER_H
+#define MICROWAVEANTENNACONTROLUNITCONTROLLER_H
+
+#include <QObject>
+
+#include <Application/ViewController/MicrowaveAntennaControlUnit/MicrowaveAntennaControlUnitFacade.h>
+
+class MicrowaveAntennaControlUnitController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MicrowaveAntennaControlUnitController(QObject *parent = nullptr);
+
+private:
+    MicrowaveAntennaControlUnitFacade facade;
+};
+
+#endif // MICROWAVEANTENNACONTROLUNITCONTROLLER_H
+
+Имя файла: MicrowaveAntennaControlUnitFacade.h
+
+#ifndef MICROWAVEANTENNACONTROLUNITFACADE_H
+#define MICROWAVEANTENNACONTROLUNITFACADE_H
+
+
+class MicrowaveAntennaControlUnitFacade
+{
+public:
+    MicrowaveAntennaControlUnitFacade();
+};
+
+#endif // MICROWAVEANTENNACONTROLUNITFACADE_H
+
+Имя файла: TrafficLightPageFacade.h
+
+#ifndef TRAFFICLIGHTPAGEFACADE_H
+#define TRAFFICLIGHTPAGEFACADE_H
+
+#include <QObject>
+#include <QVariantMap>
+#include <Application/PointersProvider.h>
+
+class TrafficLightPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit TrafficLightPageFacade(QObject *parent = nullptr);
+    void sendData(QVariantMap data);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+};
+
+#endif // TRAFFICLIGHTPAGEFACADE_H
+
+Имя файла: TrafficLightPageController.h
+
+#ifndef TRAFFICLIGHTPAGECONTROLLER_H
+#define TRAFFICLIGHTPAGECONTROLLER_H
+#include <QObject>
+
+#include <Application/ViewController/TrafficLight/TrafficLightPageFacade.h>
+#include <Application/Model/Constants/TrafficLightDataConstants.h>
+
+class TrafficLightPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit TrafficLightPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap data READ data WRITE setData NOTIFY dataChanged)
+    Q_INVOKABLE void sendDataTrafficLight();
+
+    QVariantMap data() const;
+    void setData(const QVariantMap &newData);
+
+private:
+    TrafficLightPageFacade facade;
+    QVariantMap m_data;
+
+signals:
+
+    void dataChanged();
+};
+
+#endif // TRAFFICLIGHTPAGECONTROLLER_H
+
+Имя файла: MilkQualityAnalizerPageController.h
+
+#ifndef MILKQUALITYANALIZERPAGECONTROLLER_H
+#define MILKQUALITYANALIZERPAGECONTROLLER_H
+
+#include <QObject>
+#include <QVariantMap>
+
+#include "Application/ViewController/MilkQualityAnalizer/MilkQualityAnalizerPageFacade.h"
+#include <Application/Model/Constants/MilkQualityAnalizerDataConstants.h>
+
+class MilkQualityAnalizerPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkQualityAnalizerPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap dataMilkAnalyzer READ dataMilkAnalyzer WRITE setDataMilkAnalyzer NOTIFY dataMilkAnalyzerChanged)
+
+    QVariantMap dataMilkAnalyzer() const;
+    void setDataMilkAnalyzer(const QVariantMap &newDataMilkAnalyzer);
+
+signals:
+    void dataMilkAnalyzerChanged();
+
+private slots:
+    void gotDataMilkAnalyzer(QVariantMap map);
+
+private:
+    MilkQualityAnalizerPageFacade facade;
+    QVariantMap m_dataMilkAnalyzer;
+};
+
+#endif // MILKQUALITYANALIZERPAGECONTROLLER_H
+
+Имя файла: MilkQualityAnalizerPageFacade.h
+
+#ifndef MILKQUALITYANALIZERPAGEFACADE_H
+#define MILKQUALITYANALIZERPAGEFACADE_H
+
+#include <QVariantMap>
+
+#include <Application/PointersProvider.h>
+
+class MilkQualityAnalizerPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MilkQualityAnalizerPageFacade(QObject *parent = nullptr);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+
+signals:
+    void gotDataMilkAnalyzer(QVariantMap map);
+
+private slots:
+    void gotData(QString data);
+};
+
+#endif // MILKQUALITYANALIZERPAGEFACADE_H
+
+Имя файла: ReaderStationalPageController.h
+
+#ifndef READERSTATIONALPAGECONTROLLER_H
+#define READERSTATIONALPAGECONTROLLER_H
+
+#include <QObject>
+
+#include <Application/ViewController/ReaderStational/ReaderStationalPageFacade.h>
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+class ReaderStationalPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ReaderStationalPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap data READ data WRITE setData NOTIFY dataChanged)
+
+    QVariantMap data() const;
+    void setData(const QVariantMap &newData);
+
+    Q_INVOKABLE void sendDataReaderStational();
+signals:
+
+    void dataChanged();
+private:
+    ReaderStationalPageFacade facade;
+    QVariantMap m_data;
+    SettingsManager* m_settings = PointersProvider::getSettingsManager();
+    int m_settings_type = SettingsManager::DeviceTypes::ReaderStational;
+};
+
+#endif // READERSTATIONALPAGECONTROLLER_H
+
+Имя файла: ReaderStationalPageFacade.h
+
+#ifndef READERSTATIONALPAGEFACADE_H
+#define READERSTATIONALPAGEFACADE_H
+
+#include <QObject>
+#include <QVariantMap>
+
+#include <Application/PointersProvider.h>
+
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+class ReaderStationalPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ReaderStationalPageFacade(QObject *parent = nullptr);
+    void sendData(QVariantMap data);
+
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+};
+
+#endif // READERSTATIONALPAGEFACADE_H
+
+Имя файла: PulsatorPageFacade.h
+
+#ifndef PULSATORPAGEFACADE_H
+#define PULSATORPAGEFACADE_H
+
+#include <QObject>
+#include <QVariantMap>
+#include <Application/PointersProvider.h>
+
+class PulsatorPageFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit PulsatorPageFacade(QObject *parent = nullptr);
+    void sendData(QVariantMap data);
+private:
+    DriverSerial* driver = PointersProvider::getDriverSerial();
+};
+
+#endif // PULSATORPAGEFACADE_H
+
+Имя файла: PulsatorPageController.h
+
+#ifndef PULSATORPAGECONTROLLER_H
+#define PULSATORPAGECONTROLLER_H
+
+#include <QObject>
+#include <QVariantMap>
+
+#include <Application/ViewController/Pulsator/PulsatorPageFacade.h>
+#include <Application/Model/Constants/PulsatorDataConstants.h>
+
+class PulsatorPageController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit PulsatorPageController(QObject *parent = nullptr);
+
+    Q_PROPERTY(QVariantMap data READ data WRITE setData NOTIFY dataChanged)
+    Q_INVOKABLE void sendDataPulsator();
+
+    QVariantMap data() const;
+    void setData(const QVariantMap &newData);
+
+signals:
+    void dataChanged();
+
+private:
+    PulsatorPageFacade facade;
+    QVariantMap m_data;
+};
+
+#endif // PULSATORPAGECONTROLLER_H
+
+Имя файла: PointersProvider.h
+
+#ifndef POINTERSPROVIDER_H
+#define POINTERSPROVIDER_H
+
+#include <QObject>
+#include <Application/Driver/DriverSerial.h>
+#include <Application/Driver/CommandsGenerator.h>
+#include <Application/Driver/DeviceDataParser.h>
+#include <Application/Driver/DriverNetwork.h>
+#include <Application/Driver/DriverWebsocket.h>
+#include <Application/SettingsManager.h>
+
+class PointersProvider
+{
+    public:
+        static DriverSerial* getDriverSerial();
+        static DriverNetwork* getDriverNetwork();
+        static DriverWebsocket* getDriverWebsocket();
+        static SettingsManager* getSettingsManager();
+
+        static void init();
+
+    private:
+        inline static DriverSerial m_driverSerial;
+        inline static DriverNetwork m_driverNetwork;
+        inline static DriverWebsocket m_driverWebsocket;
+        inline static SettingsManager* m_settingsManager;
+};
+#endif // POINTERSPROVIDER_H
+
+Имя файла: LoraDeviceProxyModel.h
+
+#ifndef LORADEVICEPROXYMODEL_H
+#define LORADEVICEPROXYMODEL_H
+
+#include <QSortFilterProxyModel>
+#include <QObject>
+#include <Application/Model/LoraDeviceModel.h>
+
+class LoraDeviceProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+public:
+    explicit LoraDeviceProxyModel(QObject *parent = nullptr);
+};
+
+#endif // LORADEVICEPROXYMODEL_H
+
+Имя файла: WebsocketCredentials.h
+
+#ifndef WEBSOCKETCREDENTIALS_H
+#define WEBSOCKETCREDENTIALS_H
+
+#include <QString>
+
+class WebsocketCredentials
+{
+public:
+    WebsocketCredentials(){}
+
+    QString ipAddress;
+    QString port;
+    QString login;
+    QString password;
+
+    QString token;
+};
+
+#endif // WEBSOCKETCREDENTIALS_H
+
+Имя файла: Cow.h
+
+#ifndef COW_H
+#define COW_H
+
+#include <Application/Utils.h>
+
+class Cow{
+public:
+    Cow(){}
+
+    QString getName() const;
+    void setName(const QString &newName);
+
+    QString getRfid() const;
+    void setRfid(const QString &newRfid);
+
+    QString getTag() const;
+    void setTag(const QString &newTag);
+
+    bool getSex() const;
+    void setSex(bool newSex);
+    void setSex_fromBackend(QString newSex);
+
+    QString getBirthdate() const;
+    void setBirthdate(const QString &newBirthdate);
+    void setBirthdate_fromBackend(QString newBirthdate);
+
+    QString getArrival_date() const;
+    void setArrival_date(const QString &newArrival_date);
+    void setArrival_date_fromBackend(QString newDate);
+
+    static QString formatSex_forBackend(bool newSex);
+    static QString formatSex_forReader(int newSex);
+
+    static QString formatBirthdate_forReader(QString date);
+
+    static QString formatArrivalDate_forReader(QString date);
+    int cow_id;
+
+private:
+    QString name;
+    QString rfid;
+    QString tag;
+    bool sex;
+    QString birthdate;
+    QString arrival_date;
+};
+
+#endif // COW_H
+
+Имя файла: Locations.h
+
+#ifndef LOCATIONS_H
+#define LOCATIONS_H
+
+#include <Application/Utils.h>
+
+class Locations
+{
+public:
+    Locations(){}
+
+    uint32_t id;
+
+    QString getName() const;
+    void setName(const QString &newName);
+
+private:
+    QString name;
+
+};
+
+#endif // LOCATIONS_H
+
+Имя файла: Descriptor.h
+
+#ifndef DESCRIPTOR_H
+#define DESCRIPTOR_H
+
+#include <stdint.h>
+
+#include <Application/Utils.h>
+
+class Descriptor
+{
+public:
+    enum DescriptorEnum{
+        TaskIdRole = 0,
+        CowIdRole,
+        StatusRole
+    };
+
+    Descriptor(){}
+
+    uint32_t cow_id;
+    uint32_t task_id;
+
+    bool status;
+
+    inline static  const QHash<int, QByteArray> m_mapping {
+        {TaskIdRole, "task_id"},
+        {CowIdRole, "cow_id"},
+        {StatusRole, "status"}
+    };
+
+    static QVariantMap getBlankData();
+};
+
+#endif // DESCRIPTOR_H
+
+Имя файла: Vaccine.h
+
+#ifndef VACCINE_H
+#define VACCINE_H
+
+#include <Application/Utils.h>
+
+class Vaccine
+{
+public:
+    Vaccine(){}
+
+    uint32_t id;
+
+    QString getName() const;
+    void setName(const QString &newName);
+
+private:
+    QString name;
+};
+
+#endif // VACCINE_H
+
+Имя файла: TableRows.h
+
+#ifndef TABLEROWS_H
+#define TABLEROWS_H
+
+#include <Application/Model/Constants/ReaderPortableTableTypes.h>
+
+class TableRows
+{
+public:
+    TableRows(){}
+    ReaderPortableTableType getType() const;
+    void setType(ReaderPortableTableType newType);
+    void setType_fromBackend(QString table_name);
+
+    int number;
+private:
+    ReaderPortableTableType type;
+};
+
+#endif // TABLEROWS_H
+
+Имя файла: Task.h
+
+#ifndef TASK_H
+#define TASK_H
+
+#include <Application/Utils.h>
+
+class Task{
+public:
+    Task(){}
+
+    QString getTime_end() const;
+    void setTime_end(const QString &newTime_end);
+    void setTime_end_fromBackend(QString newDate);
+
+
+    bool getStatus() const;
+    void setStatus(bool newStatus);
+    void setStatus_fromBackend(int newStatus);
+
+    QString getNote() const;
+    void setNote(const QString &newNote);
+
+    uint32_t task_id;
+    uint32_t action_id;
+
+    static bool formatStatus_fromBackend(int newStatus);
+    static int formatStatus_toBackend(bool readerStatus);
+    static QString formatTimeEnd_toBackend(QString readerTime);
+
+private:
+
+    QString time_end;
+    bool status;
+    QString note;
+
+public:
+    class Insemination{
+    public:
+
+        enum InseminationEnum{
+            TaskIdRole = 0,
+            BullIdRole,
+            BullName,
+            SampleNumberRole
+        };
+
+        inline static QHash<int, QByteArray> m_mapping {
+            {TaskIdRole, "task_id"},
+            {BullIdRole, "bull_id"},
+            {BullName, "bull_name"},
+            {SampleNumberRole, "sample_number"}
+        };
+
+        static QVariantMap getBlankData(){
+            return Utils::getBlankDataForMapping(m_mapping);
+        }
+
+        uint32_t task_id;
+
+        uint32_t bull_id;
+        uint32_t sample_number;
+    };
+    class ChangeLocation{
+    public:
+        enum ChangeLocationEnum{
+            TaskIdRole = 0,
+            LocationIdRole,
+            LocationNameRole
+        };
+
+        inline static QHash<int, QByteArray> m_mapping {
+            {TaskIdRole, "task_id"},
+            {LocationIdRole, "location_id"},
+            {LocationNameRole, "location_name"}
+        };
+
+        static QVariantMap getBlankData(){
+            return Utils::getBlankDataForMapping(m_mapping);
+        }
+
+        uint32_t task_id;
+
+        uint32_t location_id;
+    };
+    class Vaccination{
+    public:
+        enum VaccinationEnum{
+            TaskIdRole = 0,
+            VaccineIdRole,
+            VaccineNameRole,
+            PlaceRole,
+            DoseRole
+        };
+
+        inline static QHash<int, QByteArray> m_mapping {
+            {TaskIdRole, "task_id"},
+            {VaccineIdRole, "vaccine_id"},
+            {VaccineNameRole, "vaccine_name"},
+            {PlaceRole, "place"},
+            {DoseRole, "dose"},
+        };
+
+        static QVariantMap getBlankData(){
+            return Utils::getBlankDataForMapping(m_mapping);
+        }
+
+        uint32_t task_id;
+
+        uint32_t vaccine_id;
+        uint32_t dose;
+
+        QString getPlace() const;
+        void setPlace(const QString &newPlace);
+
+    private:
+        QString place;
+    };
+};
+
+#endif // TASK_H
+
+Имя файла: EventModel.h
+
+#ifndef EVENTMODEL_H
+#define EVENTMODEL_H
+
+#include <QAbstractListModel>
+#include <QDate>
+
+
+
+class EventModel : public QAbstractListModel
+{
+    Q_OBJECT
+public:
+    enum Roles {
+        NameRole = Qt::UserRole,
+        DateTimeRole,
+        CommentRole
+    };
+
+    struct Data {
+        Data() {}
+        Data(
+                const QString& name,
+                const QString& comment,
+                const QString& dateTime
+       )
+        :  name(name), comment(comment), dateTime(dateTime) {}
+    public:
+        QString name;
+        QString comment;
+        QString dateTime;
+    };
+
+    EventModel();
+
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+
+    int count() const;
+    void add(EventModel::Data data);
+    void clear();
+    EventModel::Data getDataByRow(int row);
+signals:
+    void countChanged();
+
+private:
+    QVector<Data> m_data;
+};
+
+
+#endif // EVENTMODEL_H
+
+Имя файла: TaskModel.h
+
+#ifndef TASKMODEL_H
+#define TASKMODEL_H
+
+#include <QAbstractListModel>
+#include <QDate>
+
+#include <Application/Utils.h>
+#include <Application/Model/Data/ReaderEntities/Descriptor.h>
+
+class TaskModel : public QAbstractListModel
+{
+    Q_OBJECT
+public:
+    enum Roles {
+        StartRoles =  Qt::UserRole,
+        CheckedRole,
+
+        TaskIdRole,
+        ActionIdRole,
+        ActionNameRole,
+        StatusRole,
+        NoteRole,
+
+        CowListRole,
+        DescriptorListRole,
+        CombinedListRole,
+
+        TaskVaccinationDataRole,
+        TaskInseminationDataRole,
+        TaskChangeLocationDataRole,
+
+        DoneCounterRole,
+
+        EndRoles
+    };
+
+private:
+    const int m_RolesMin = (int)StartRoles;
+    const int m_RolesMax = (int)EndRoles;
+
+public:
+    inline static QHash<int, QByteArray> m_mapping {
+        {CheckedRole, "checked_state"},
+
+        {TaskIdRole, "task_id"},
+        {ActionIdRole, "action_id"},
+        {ActionNameRole, "action_name"},
+        {StatusRole, "status"},
+        {NoteRole, "note"},
+
+        {CowListRole, "cow_list"},
+        {DescriptorListRole, "descriptor_list"},
+        {CombinedListRole, "cow_desc_list"},
+
+        {TaskVaccinationDataRole, "vaccination_data"},
+        {TaskInseminationDataRole, "insemination_data"},
+        {TaskChangeLocationDataRole, "change_location_data"},
+
+        {DoneCounterRole, "done_counter"}
+
+    };
+
+    TaskModel();
+
+    //overrided things
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) const;
+
+    //my things
+
+    //getting data
+    QList<QVariantMap> data();
+    QList<QVariantMap> dataChoosed();
+    Q_INVOKABLE QVariantMap dataByTaskIndex(int index);
+    Q_INVOKABLE static QVariantMap getBlankData();
+
+    QVariantMap getCombinedDataForTaskAndCow(int task_id, int cow_id);
+
+    //update data
+    Q_INVOKABLE bool setData(int index, QString roleName, QVariant value);
+    void changeDescriptorStatus(int task_id, int cow_id, bool status);
+
+    void add(QVariantMap data);
+    void addDescriptor(QVariantMap data);
+
+    void addCombinedData(QVariantMap data);
+
+    void clear();
+
+    //simple getter
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+    int count() const;
+
+private:
+    int getTaskIndex(int task_id);
+
+private:
+    QList<QVariantMap> m_data;
+
+signals:
+    void countChanged();
+    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight) const;
+
+
+};
+
+
+#endif // TASKMODEL_H
+
+Имя файла: CowModel.h
+
+#ifndef COWMODEL_H
+#define COWMODEL_H
+
+#include <QStringList>
+#include <QDate>
+#include <QAbstractListModel>
+#include <QList>
+#include <QVariantMap>
+
+#include <Application/Utils.h>
+
+class CowModel : public QAbstractListModel
+{
+    Q_OBJECT
+
+public:
+    enum Roles {
+        NameRole = Qt::UserRole,
+        RfidRole,
+        EarTagRole,
+        SexRole,
+        BirthdayRole,
+        DateArrivalRole,
+        LoadedRole,
+        IdCowRole,
+        CheckedRole
+    };
+
+private:
+    int m_RolesMin = (int)NameRole;
+    int m_RolesMax = (int)CheckedRole;
+
+public:
+    inline static QHash<int, QByteArray> m_mapping {
+        {NameRole, "name"},
+        {RfidRole, "rfid"},
+        {EarTagRole, "earTag"},
+        {SexRole, "sex"},
+        {BirthdayRole, "birthday"},
+        {DateArrivalRole, "dateArrival"},
+        {LoadedRole, "loaded"},
+        {IdCowRole, "id_cow"},
+        {CheckedRole, "checked_state"}
+    };
+
+    CowModel();
+
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QList<QVariantMap> data();
+    QList<QVariantMap> dataChoosed();
+
+    QHash<int, QByteArray> roleNames() const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) const;
+
+    Q_INVOKABLE bool setData(int index, QString roleName, QVariant value);
+
+    void add(QVariantMap data);
+
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
+    int count() const;
+
+    void clear();
+
+    static QVariantMap getBlankData();
+signals:
+    void countChanged();
+    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) const;
+
+private:
+    QList<QVariantMap> m_data;
+};
+#endif // COWMODEL_H
+
+Имя файла: TaskDelegate.h
+
+
+Имя файла: CowProxyModel.h
+
+#ifndef COWPROXYMODEL_H
+#define COWPROXYMODEL_H
+
+#include <QObject>
+#include <QSortFilterProxyModel>
+
+#include <Application/Model/Data/TableModels/CowModel.h>
+
+class CowProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+public:
+    explicit CowProxyModel(QObject *parent = nullptr);
+};
+
+#endif // COWPROXYMODEL_H
+
+Имя файла: TaskProxyModel.h
+
+#ifndef TASKPROXYMODEL_H
+#define TASKPROXYMODEL_H
+
+#include <QObject>
+#include <QSortFilterProxyModel>
+
+class TaskProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+public:
+    explicit TaskProxyModel(QObject *parent = nullptr);
+};
+
+#endif // TASKPROXYMODEL_H
+
+Имя файла: IRepository.h
+
+#ifndef IREPOSITORY_H
+#define IREPOSITORY_H
+
+#include <QString>
+#include <QAbstractListModel>
+
+class IRepository{
+public:
+    virtual ~IRepository() = default;
+    virtual void create() = 0;
+    virtual void read(QString filters) = 0;
+};
+
+#endif // IREPOSITORY_H
+
+Имя файла: ConnectionsController.h
+
+#ifndef CONNECTIONSCONTROLLER_H
+#define CONNECTIONSCONTROLLER_H
+
+#include "ConnectionsControllerFacade.h"
+
+#include <QObject>
+#include <QSerialPortInfo>
+
+#include <Application/Model/Constants/WebSocketConnectionType.h>
+#include <Application/Model/Data/WebsocketCredentials.h>
+
+class ConnectionsController : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ConnectionsController(QObject *parent = nullptr);
+
+    Q_INVOKABLE void serialPortConnect();
+    Q_INVOKABLE void serialPortListReload();
+    Q_INVOKABLE void serialModbusSend();
+
+    Q_INVOKABLE void websocketConnectLora();
+    Q_INVOKABLE void websocketConnectBackend();
+
+    Q_INVOKABLE void websocketDisconnect();
+
+    Q_INVOKABLE void pageLoadStateChanged(bool loaded);
+    Q_INVOKABLE void setPageType(int type);
+
+    Q_PROPERTY(QStringList serialPortStringList READ serialPortStringList WRITE setSerialPortStringList NOTIFY serialPortStringListChanged)
+    Q_PROPERTY(QString serialPortName READ serialPortName WRITE setSerialPortName NOTIFY serialPortNameChanged)
+    Q_PROPERTY(QString serialPortConnectedName READ serialPortConnectedName WRITE setSerialPortConnectedName NOTIFY serialPortConnectedNameChanged)
+
+    Q_PROPERTY(QString serialPortStatus READ serialPortStatus WRITE setSerialPortStatus NOTIFY serialPortStatusChanged)
+    Q_PROPERTY(bool serialPortIsConnected READ serialPortIsConnected WRITE setSerialPortIsConnected NOTIFY serialPortIsConnectedChanged)
+
+    Q_PROPERTY(QString connectedDeviceName READ connectedDeviceName WRITE setConnectedDeviceName NOTIFY connectedDeviceNameChanged)
+    Q_PROPERTY(int serialModbusId READ serialModbusId WRITE setSerialModbusId NOTIFY serialModbusIdChanged)
+
+    Q_PROPERTY(QString serverConnectAddress READ serverConnectAddress WRITE setServerConnectAddress NOTIFY serverConnectAddressChanged)
+    Q_PROPERTY(QString serverConnectPort READ serverConnectPort WRITE setServerConnectPort NOTIFY serverConnectPortChanged)
+    Q_PROPERTY(QString serverConnectStatus READ serverConnectStatus WRITE setServerConnectStatus NOTIFY serverConnectStatusChanged)
+    Q_PROPERTY(bool serverConnectIsConnected READ serverConnectIsConnected WRITE setServerConnectIsConnected NOTIFY serverConnectIsConnectedChanged)
+
+    Q_PROPERTY(QString webSocketConnectLogin READ webSocketConnectLogin WRITE setWebSocketConnectLogin NOTIFY webSocketConnectLoginChanged)
+    Q_PROPERTY(QString webSocketConnectPassword READ webSocketConnectPassword WRITE setWebSocketConnectPassword NOTIFY webSocketConnectPasswordChanged)
+
+    QString serialPortName() const;
+    void setSerialPortName(const QString &newSerialPortName);
+
+    QStringList serialPortStringList() const;
+    void setSerialPortStringList(const QStringList &newSerialPortStringList);
+
+    QString serialPortStatus() const;
+    void setSerialPortStatus(const QString &newSerialPortStatus);
+
+    bool serialPortIsConnected() const;
+    void setSerialPortIsConnected(bool newSerialPortIsConnected);
+
+    QString connectedDeviceName() const;
+    void setConnectedDeviceName(const QString &newConnectedDeviceName);
+
+    QString serialPortConnectedName() const;
+    void setSerialPortConnectedName(const QString &newSerialPortConnectedName);
+
+    QString serverConnectAddress();
+    void setServerConnectAddress(const QString &newServerConnectAddress);
+
+    QString serverConnectPort();
+    void setServerConnectPort(const QString &newServerConnectPort);
+
+    QString serverConnectStatus();
+    void setServerConnectStatus(const QString &newServerConnectStatus);
+
+    bool serverConnectIsConnected();
+    void setServerConnectIsConnected(bool newServerConnectIsConnected);
+
+    QString webSocketConnectLogin();
+    void setWebSocketConnectLogin(const QString &newWebSocketConnectLogin);
+
+    QString webSocketConnectPassword();
+    void setWebSocketConnectPassword(const QString &newWebSocketConnectPassword);
+
+    int serialModbusId() const;
+    void setSerialModbusId(int newSerialModbusId);
+
+private slots:
+    void onSerialPortGetData(QList<QSerialPortInfo> data);
+    void onServerConnectStatusChange(ServerConnectStatus status);
+    void onSerialPortConnectionStatusChange(SerialPortConnectionStatus status);
+    void onConnectedDeviceNameChange(QString newName);
+signals:
+    void serialPortStringListChanged();
+    void serialPortNameChanged();
+    void serialPortStatusChanged();
+    void serialPortIsConnectedChanged();
+    void serialPortConnectedNameChanged();
+    void connectedDeviceNameChanged();
+
+    void serverConnectAddressChanged();
+    void serverConnectPortChanged();
+    void serverConnectStatusChanged();
+    void serverConnectIsConnectedChanged();
+    void webSocketConnectLoginChanged();
+    void webSocketConnectPasswordChanged();
+
+    void serialModbusIdChanged();
+
+private:
+    ConnectionsControllerFacade facade;
+    SettingsManager* m_settings = PointersProvider::getSettingsManager();
+
+    QStringList m_serialPortStringList;
+    QString m_serialPortName;
+    QString m_serialPortStatus = SerialPortConnectionStatusText::getTextByStatus(SerialPortConnectionStatus::not_connected);
+    bool m_serialPortIsConnected = false;
+
+    QString m_serialPortConnectedName;
+    int m_serialModbusId;
+
+    WebsocketCredentials websocketCredentials[3];
+
+    QString m_serverConnectStatus = ServerConnectStatusText::getTextByStatus(ServerConnectStatus::not_connected);
+    QString m_connectedDeviceName = "Нет данных";
+    bool m_serverConnectIsConnected = false;
+
+    WebSocketConnectionType m_websocketConnectionType = WebSocketConnectionType::None;
+};
+
+#endif // CONNECTIONSCONTROLLER_H
+
+Имя файла: ConnectionsControllerFacade.h
+
+#ifndef CONNECTIONSCONTROLLERFACADE_H
+#define CONNECTIONSCONTROLLERFACADE_H
+
+#include <QObject>
+#include <QSerialPortInfo>
+#include <Application/PointersProvider.h>
+
+#include <Application/Model/Constants/ConnectionStatus.h>
+#include <Application/Model/Data/WebsocketCredentials.h>
+
+#include <Application/Model/Constants/WebSocketConnectionType.h>
+
+class ConnectionsControllerFacade : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ConnectionsControllerFacade(QObject *parent = nullptr);
+
+    void serialPortConnect(QString portString);
+    void serialPortListReload();
+    void serialModbusSend(int id);
+
+    void webSocketConnectLora(WebsocketCredentials credentials);
+    void webSocketConnectBackend(WebsocketCredentials credentials);
+
+    void driverSwitchReading(bool state);
+    void driverWebsocketDisconnect();
+private:
+    DriverSerial* driverSerial = PointersProvider::getDriverSerial();
+    DriverNetwork* driverNetwork = PointersProvider::getDriverNetwork();
+    DriverWebsocket* driverWebsocket = PointersProvider::getDriverWebsocket();
+
+    bool m_driverConfiguring = false;
+    WebSocketConnectionType m_connectionType = WebSocketConnectionType::None;
+    WebsocketCredentials m_credentials;
+
+signals:
+    void onSerialPortGetData(QList<QSerialPortInfo> data);
+    void onServerConnectStatusChange(ServerConnectStatus status);
+    void onSerialPortConnectionStatusChange(SerialPortConnectionStatus status);
+    void onConnectedDeviceNameChange(QString newName);
+
+private slots:
+    void serialPortStatusChanged(bool status);
+    void onWebsocketStatusChanged(ServerConnectStatus status);
+    void onWebsocketGotData(QString data);
+
+    void onNetworkGotData(QNetworkReply *reply);
+};
+
+#endif // CONNECTIONSCONTROLLERFACADE_H
+
+Имя файла: LoraDeviceModel.h
+
+#ifndef LORADEVICEMODEL_H
+#define LORADEVICEMODEL_H
+
+#include <QObject>
+#include <QAbstractListModel>
+#include <Application/Model/Constants/LoraDeviceConstants.h>
+
+#include <Application/Utils.h>
+
+class LoraDeviceModel : public QAbstractListModel
+{
+    Q_OBJECT
+public:
+
+    enum Roles {
+        DeviceNameRole = Qt::UserRole,
+        DevEuiRole,
+        DevAddressRole,
+        AppsKeyRole,
+        NwksKeyRole,
+        AppEuiRole,
+        AppKeyRole,
+        SettingsDeviceTypeRole,
+        SettingsConnectionTypeRole,
+        SettingsDataTransmitPeriodRole,
+        SettingsMeasurementRole
+    };
+    inline static QHash<int, QByteArray> m_mapping {
+        {DeviceNameRole, "deviceName"},
+        {DevEuiRole, "devEui"},
+        {DevAddressRole, "devAddress"},
+        {AppsKeyRole, "appsKey"},
+        {NwksKeyRole, "nwksKey"},
+        {AppEuiRole, "appEui"},
+        {AppKeyRole, "appKey"},
+        {SettingsDeviceTypeRole, "settingsDeviceType"},
+        {SettingsConnectionTypeRole, "settingsConnectionType"},
+        {SettingsDataTransmitPeriodRole, "settingsDataTransmitPeriod"},
+        {SettingsMeasurementRole, "settingsMeasurement"}
+    };
+
+public:
+
+    LoraDeviceModel();
+
+    int rowCount(const QModelIndex &parent) const override;
+    QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const;
+    bool setData(const QModelIndex &index, const QVariant &value, int role) const;
+    void setData(int row, QVariantMap data);
+
+    void add(QVariantMap data);
+    void removeByIndex(int index);
+
+    Q_INVOKABLE QVariant getDataByRow(int index, QString roleName);
+    Q_INVOKABLE QVariantMap getDataByRow(int index);
+
+    Q_INVOKABLE int findDataByDevEui(QString devEui);
+
+    static void init_data_model(QVariantMap* data);
+    void clear();
+
+    Q_INVOKABLE static QVariantMap getBlankModel();
+
+signals:
+    void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles) const;
+private:
+    QVector<QVariantMap> m_mapData;
+signals:
+
+};
+
+#endif // LORADEVICEMODEL_H
+
+Имя файла: ReaderPortableResponseTypes.h
+
+#ifndef READERPORTABLERESPONSETYPES_H
+#define READERPORTABLERESPONSETYPES_H
+
+enum class ReaderPortableResponseTypes{
+    None = 0,
+    TableRowsResponse = 1,
+    DataStatusResponse,
+    DropTableResponse,
+
+    GetTimeResponse,
+
+    GetCowNewResponse,
+
+    GetCowLoadedResponse,
+    GetTaskResponse,    
+    GetDescriptorResponse
+};
+
+#endif // READERPORTABLERESPONSETYPES_H
+
+Имя файла: PulsatorDataConstants.h
+
+#ifndef PULSATORDATACONSTANTS_H
+#define PULSATORDATACONSTANTS_H
+
+#include <QObject>
+
+class PulsatorDataConstants{
+public:
+    inline static QString duty_cycle = "duty_cycle";
+    inline static QString frequency = "frequency";
+};
+#endif // PULSATORDATACONSTANTS_H
+
+Имя файла: MilkStreamSensorDataConstants.h
+
+#ifndef MILKSTREAMSENSORDATACONSTANTS_H
+#define MILKSTREAMSENSORDATACONSTANTS_H
+
+#include <QObject>
+
+class MilkStreamSensorDataConstants{
+    public:
+        inline static QString speed = "speed";
+        inline static QString volume = "volume";
+        inline static QString temperature = "temperature";
+};
+#endif // MILKSTREAMSENSORDATACONSTANTS_H
+
+Имя файла: MilkMeterDataConstants.h
+
+#ifndef MILKMETERDATACONSTANTS_H
+#define MILKMETERDATACONSTANTS_H
+
+
+#include <QObject>
+
+class MilkMeterDataConstants{
+public:
+    inline static QString conductivity = "conductivity";
+    inline static QString speed = "speed";
+    inline static QString volume = "volume";
+    inline static QString temperature = "temperature";
+};
+
+#endif // MILKMETERDATACONSTANTS_H
+
+Имя файла: ReaderPortableTableTypes.h
+
+#ifndef READERPORTABLETABLETYPES_H
+#define READERPORTABLETABLETYPES_H
+
+#include <QString>
+
+enum class ReaderPortableTableType{
+    Error = -1,
+    Task = 0,
+    Task_insemination,
+    Task_change_location,
+    Task_vaccine,
+    Descriptor,
+    Cow_new = 5,
+    Cow_loaded,
+    Locations,
+    Vaccines
+};
+
+class ReaderPortableTableTypesText{
+public:
+    static inline QString task = "task";
+    static inline QString task_insemination = "task_insemination";
+    static inline QString task_change_location = "task_change_location";
+    static inline QString task_vaccine = "task_vaccine";
+    static inline QString descriptor = "descriptor";
+    static inline QString cow_new = "cow_new";
+    static inline QString cow_loaded = "cow_loaded";
+    static inline QString locations = "locations";
+    static inline QString vaccines = "vaccines";
+
+    static QString getTextByType(ReaderPortableTableType type){
+        switch (type) {
+        case ReaderPortableTableType::Task:
+            return task;
+        case ReaderPortableTableType::Task_insemination:
+            return task_insemination;
+        case ReaderPortableTableType::Task_change_location:
+            return task_change_location;
+        case ReaderPortableTableType::Task_vaccine:
+            return task_vaccine;
+        case ReaderPortableTableType::Descriptor:
+            return descriptor;
+        case ReaderPortableTableType::Cow_new:
+            return cow_new;
+        case ReaderPortableTableType::Cow_loaded:
+            return cow_loaded;
+        case ReaderPortableTableType::Locations:
+            return locations;
+        case ReaderPortableTableType::Vaccines:
+            return vaccines;
+        default:
+            return "Error";
+        }
+    }
+
+    static ReaderPortableTableType getTypeByText(QString table_name){
+        if (table_name.contains(task)) return ReaderPortableTableType::Task;
+        if (table_name.contains(task_insemination)) return ReaderPortableTableType::Task_insemination;
+        if (table_name.contains(task_change_location)) return ReaderPortableTableType::Task_change_location;
+        if (table_name.contains(task_vaccine)) return ReaderPortableTableType::Task_vaccine;
+        if (table_name.contains(descriptor)) return ReaderPortableTableType::Descriptor;
+        if (table_name.contains(cow_new)) return ReaderPortableTableType::Cow_new;
+        if (table_name.contains(cow_loaded)) return ReaderPortableTableType::Cow_loaded;
+        if (table_name.contains(locations)) return ReaderPortableTableType::Locations;
+        if (table_name.contains(vaccines)) return ReaderPortableTableType::Vaccines;
+        return ReaderPortableTableType::Error;
+    }
+};
+
+#endif // READERPORTABLETABLETYPES_H
+
+Имя файла: ConnectionStatus.h
+
+#ifndef CONNECTIONSTATUS_H
+#define CONNECTIONSTATUS_H
+
+#include <QObject>
+
+enum class ServerConnectStatus{
+    not_connected = 0,
+    connected = 1,
+    error = 2
+};
+
+class ServerConnectStatusText{
+public:
+    inline static QString not_connected = "Не подключено";
+    inline static QString connected = "Подключено";
+    inline static QString error = "Ошибка";
+
+    static QString getTextByStatus(ServerConnectStatus status){
+        switch(status){
+            case ServerConnectStatus::connected:
+                return connected;
+            case ServerConnectStatus::not_connected:
+                return not_connected;
+            default: case ServerConnectStatus::error:
+                return error;
+        }
+    }
+};
+
+enum class SerialPortConnectionStatus{
+    not_connected = 0,
+    connected = 1,
+    error = 2
+};
+
+class SerialPortConnectionStatusText{
+public:
+    inline static QString not_connected = "Не подключено";
+    inline static QString connected = "Подключено";
+    inline static QString error = "Ошибка";
+
+    static QString getTextByStatus(SerialPortConnectionStatus status){
+        switch(status){
+        case SerialPortConnectionStatus::connected:
+                return connected;
+        case SerialPortConnectionStatus::not_connected:
+                return not_connected;
+        default: case SerialPortConnectionStatus::error:
+                return error;
+        }
+    }
+};
+
+#endif // CONNECTIONSTATUS_H
+
+
+Имя файла: TrafficLightDataConstants.h
+
+#ifndef TRAFFICLIGHTPAGEDATACONSTANTS_H
+#define TRAFFICLIGHTPAGEDATACONSTANTS_H
+
+#include <QObject>
+
+class TrafficLightDataConstants{
+public:
+    inline static QString period = "period";
+    inline static QString time = "time";
+    inline static QString section = "section";
+    inline static QString red = "red";
+    inline static QString green = "green";
+    inline static QString blue = "blue";
+    inline static QString brightness = "brightness";
+};
+
+#endif // TRAFFICLIGHTPAGEDATACONSTANTS_H
+
+Имя файла: ReaderCowTabReaderType.h
+
+#ifndef READERCOWTABREADERTYPE_H
+#define READERCOWTABREADERTYPE_H
+
+enum class ReaderCowTabReaderType{
+    Loaded = 0,
+    Created = 1
+}
+
+#endif // READERCOWTABREADERTYPE_H
+
+Имя файла: MilkQualityAnalizerDataConstants.h
+
+#ifndef MILKQUALITYANALIZERDATACONSTANTS_H
+#define MILKQUALITYANALIZERDATACONSTANTS_H
+
+#include <QObject>
+
+class MilkQualityAnalizerDataConstants{
+public:
+    inline static QString fat = "fat";
+    inline static QString protein = "protein";
+    inline static QString lactose = "lactose";
+    inline static QString somo = "somo";
+    inline static QString blood = "blood";
+    inline static QString temperature = "temperature";
+};
+#endif // MILKQUALITYANALIZERDATACONSTANTS_H
+
+Имя файла: ActionResultTypes.h
+
+#ifndef ACTIONRESULTTYPES_H
+#define ACTIONRESULTTYPES_H
+
+#include <QString>
+
+enum class ActionResultTypes{
+    Waiting = 0,
+    Ok = 1,
+    Error = 2,
+    WaitDone = 3
+};
+
+class ActionResultErrorString{
+public:
+    static inline QString repetitionDevAddr = "Устройство с таким devAddress существует";
+    static inline QString reginfoAlreadyExist = "Устройство с такой регистрационной информацией существует";
+    static inline QString maxDevCountReached = "Достигнут максимум устройств";
+    static inline QString other_error = "Другая ошибка";
+
+};
+
+#endif // ACTIONRESULTTYPES_H
+
+Имя файла: DeviceWebsocketSettingsConstants.h
+
+#ifndef DEVICEWEBSOCKETSETTINGSCONSTANTS_H
+#define DEVICEWEBSOCKETSETTINGSCONSTANTS_H
+
+#include <QObject>
+
+class DeviceWebsocketSettingsConstants{
+public:
+    inline static QString selfIp = "selfIp";
+    inline static QString serverIp = "serverIp";
+    inline static QString serverPort = "serverPort";
+    inline static QString serverMask = "serverMask";
+    inline static QString serverGateway = "serverGateway";
+    inline static QString wsLogin = "wsLogin";
+    inline static QString wsPassword = "wsPassword";
+};
+
+#endif // DEVICEWEBSOCKETSETTINGSCONSTANTS_H
+
+Имя файла: BackendWSResponseTypes.h
+
+#ifndef BACKENDWSRESPONSETYPES_H
+#define BACKENDWSRESPONSETYPES_H
+
+enum class BackendWSResponseTypes{
+    None = 0,
+    CowList = 1,
+    TasksList = 2
+};
+
+#endif // BACKENDWSRESPONSETYPES_H
+
+Имя файла: MPCDataConstants.h
+
+#ifndef MPCDATACONSTANTS_H
+#define MPCDATACONSTANTS_H
+
+
+#include <QObject>
+
+class MPCDataConstants{
+public:
+    inline static QString name = "name";
+    inline static QString value = "value";
+};
+
+enum class MPCPageType{
+    CowParameters = 1,
+    ProductionParameters = 2,
+    SystemParameters = 3
+};
+
+class MPCPageTypeStrings{
+public:
+    static inline QString cowParameters = "cow";
+    static inline QString productionParameters = "production";
+    static inline QString systemParameters = "system";
+
+    static QString get(MPCPageType type){
+        switch (type) {
+        default:
+        case MPCPageType::CowParameters:
+            return cowParameters;
+        case MPCPageType::ProductionParameters:
+            return productionParameters;
+        case MPCPageType::SystemParameters:
+            return systemParameters;
+        }
+
+    }
+};
+
+#endif // MPCDATACONSTANTS_H
+
+Имя файла: TaskActionType.h
+
+#ifndef TASKACTIONTYPE_H
+#define TASKACTIONTYPE_H
+
+enum class TaskActionType{
+    Error = -1,
+    Weighting = 1,
+    Vaccination = 2,
+    Insemination = 3,
+    ChangeLocation = 4,
+    CowCount = 5
+
+};
+
+#endif // TASKACTIONTYPE_H
+
+Имя файла: LoraDeviceConstants.h
+
+#ifndef LORADEVICECONSTANTS_H
+#define LORADEVICECONSTANTS_H
+
+#include <QObject>
+
+enum class ConnectionType{
+    WithoutRegistration = 0,
+    WithRegistration = 1
+};
+
+enum class DeviceType{
+    Transponder = 0,
+    Stepcounter = 1
+};
+
+enum class DataTransmitPeriod{
+    Min1 = 0,
+    Min5 = 1,
+    Min10 = 2,
+    Hour1 = 3,
+    Hour4 = 4,
+    Hour12 = 5,
+    Hour24 = 6
+};
+
+enum class Measurement{
+    TurnOff = 0,
+    TurnOn = 1
+};
+
+#endif // LORADEVICECONSTANTS_H
+
+Имя файла: LoraBSResponseTypes.h
+
+#ifndef LORABSRESPONSETYPES_H
+#define LORABSRESPONSETYPES_H
+
+enum class LoraBSResponseTypes{
+    None = 0,
+    DeviceList = 1,
+    AddDevice
+};
+
+#endif // LORABSRESPONSETYPES_H
+
+Имя файла: WebSocketConnectionType.h
+
+#ifndef WEBSOCKETCONNECTIONTYPE_H
+#define WEBSOCKETCONNECTIONTYPE_H
+
+enum class WebSocketConnectionType{
+    None = 0,
+    Lora = 1,
+    Backend = 2
+};
+
+#endif // WEBSOCKETCONNECTIONTYPE_H
+
+Имя файла: SettingsManager.h
+
+#ifndef SETTINGSMANAGER_H
+#define SETTINGSMANAGER_H
+
+#include <QObject>
+#include <QSettings>
+
+#include <QDebug>
+
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+class SettingsManager
+{
+public:
+
+    class WsTypes{
+    public:
+        enum _WsTypes{
+            None = 0,
+            Lora = 1,
+            Backend = 2
+        };
+
+        static inline QString backend = "backend";
+        static inline QString lora = "lora";
+
+        static QString getStringByType(int type){
+            switch ((_WsTypes)type){
+            case WsTypes::Backend:
+                return backend;
+            case WsTypes::Lora:
+                return lora;
+            case None: default:
+                return "error";
+            }
+        }
+    };
+
+    class DeviceTypes{
+    public:
+        enum _DeviceTypes{
+            None = 0,
+            MPC = 1,
+            EDC = 2,
+            ReaderStational = 3
+        };
+
+        inline static QString mpc = "mpc";
+        inline static QString edc = "edc";
+        inline static QString readerStational = "reader_st";
+
+        static QString getStringByType(int type){
+            switch ((_DeviceTypes)type){
+            case MPC:
+                return mpc;
+            case EDC:
+                return edc;
+            case ReaderStational:
+                return readerStational;
+            case None: default:
+                return "error";
+            }
+        }
+    };
+
+    class Values{
+    public:
+
+        //ws data
+        inline static QString wsAddress = "ws_?/address";
+        inline static QString wsPort = "ws_?/port";
+        inline static QString wsUsername = "ws_?/username";
+        inline static QString wsPassword = "ws_?/password";
+
+        //device ws settings
+        inline static QString deviceSelfIpAddress = "devices_?/self_ip";
+        inline static QString deviceServerIpAddress = "devices_?/server_ip";
+        inline static QString deviceServerPort = "devices_?/server_ip_port";
+        inline static QString deviceServerGateway = "devices_?/server_ip_gateway";
+        inline static QString deviceServerMask = "devices_?/server_ip_mask";
+        inline static QString deviceWsUsername = "devices_?/ws_username";
+        inline static QString deviceWsPassword = "devices_?/ws_password";
+    };
+
+    SettingsManager();
+
+    QString getWsAddress(int type);
+    QString getWsPort(int type);
+    QString getWsUsername(int type);
+    QString getWsPassword(int type);
+
+    void setWsAddress(int type, QString value);
+    void setWsPort(int type, QString value);
+    void setWsUsername(int type, QString value);
+    void setWsPassword(int type, QString value);
+
+    //device
+
+    QString getDeviceSelfAddress(int type);
+    QString getDeviceServerAddress(int type);
+    QString getDeviceServerPort(int type);
+    QString getDeviceServerGateway(int type);
+    QString getDeviceServerMask(int type);
+    QString getDeviceUsername(int type);
+    QString getDevicePassword(int type);
+
+    void setDeviceSelfAddress(int type, QString value);
+    void setDeviceServerAddress(int type, QString value);
+    void setDeviceServerPort(int type, QString value);
+    void setDeviceServerGateway(int type, QString value);
+    void setDeviceServerMask(int type, QString value);
+    void setDeviceUsername(int type, QString value);
+    void setDevicePassword(int type, QString value);
+
+    QVariantMap getDeviceWebsocketSettings(int type);
+    void setDeviceWebsocketSettings(int type, QVariantMap data);
+
+private:
+    QString getDataFromSettings(QString string);
+    void setDataToFile(QString string, QString value);
+
+    QString replaceWithCopy(QString orig, QString value);
+
+private:
+    QSettings settings = QSettings("settings.ini", QSettings::IniFormat);
+};
+
+#endif // SETTINGSMANAGER_H
+
+Имя файла: DriverWebsocket.h
+
+#ifndef DRIVERWEBSOCKET_H
+#define DRIVERWEBSOCKET_H
+
+#include <QObject>
+
+#include <QWebSocket>
+
+#include <Application/Model/Constants/ConnectionStatus.h>
+
+class DriverWebsocket : public QObject
+{
+    Q_OBJECT
+public:
+    explicit DriverWebsocket(QObject *parent = nullptr);
+    DriverWebsocket();
+
+    void connectWithCookie(QString urlString, QString token);
+    void connectToWS(QUrl url);
+    void disconnect();
+
+    void startReading();
+    void stopReading();
+
+    void sendData(QString data);
+
+private:
+    QWebSocket m_ws;
+    ServerConnectStatus m_status = ServerConnectStatus::not_connected;
+
+    bool m_reading = false;
+
+    void setStatus(ServerConnectStatus status);
+
+signals:
+    void statusChanged(ServerConnectStatus status);
+    void gotData(QString data);
+
+private slots:
+    void onStateChanged(QAbstractSocket::SocketState state);
+    void onError(QAbstractSocket::SocketError error);
+    void onTextMessageReceived(QString message);
+};
+
+#endif // DRIVERWEBSOCKET_H
+
+Имя файла: CommandsGenerator.h
+
+#ifndef COMMANDSGENERATOR_H
+#define COMMANDSGENERATOR_H
+
+#include <QObject>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+#include <Application/Model/Constants/MPCDataConstants.h>
+#include <Application/Model/Data/TableModels/CowModel.h>
+#include <Application/Model/Data/TableModels/TaskModel.h>
+
+#include <Application/Model/Data/ReaderEntities/Task.h>
+#include <Application/Model/Data/ReaderEntities/Descriptor.h>
+
+#include <Application/Model/LoraDeviceModel.h>
+#include <Application/Model/Constants/DeviceWebsocketSettingsConstants.h>
+
+class CommandsGenerator
+{
+public:
+    //devices
+    static QString setModbusId(int id);
+    static QString setDoubleValve(bool data[2]);
+    static QString setPulsator(int frequency, int duty_cycle);
+
+    static QString setTrafficLightColor(int red, int green, int blue, int section);
+    static QString setTrafficLightPeriod(int period, int time);
+    static QString setTrafficLightBrightness(int brightness);
+
+    static QString setElectricDevicesController(QVariantMap data);
+    static QString setReaderStational(QVariantMap data);
+    static QString setMPCWsSettings(QVariantMap data);
+
+    static QString setMPCParameters(QVariantList parametersList, MPCPageType pageType);
+
+    //LORA BS
+    static QString sendAuthRequest(QString login, QString password);
+    static QString sendDevicesListRequest();
+    static QString sendLoraAddDevice(QVariantMap data);
+    static QString sendLoraRemoveDevice(QString devEui);
+
+    static QString sendLoraTime(QString devEui);
+    static QString sendLoraSettings(QVariantMap data);
+
+    //backend general
+    static QString sendBackendGetToken(QString login, QString password);
+
+    //reader portable general
+    static QString reader_sendTableRowsRequest(QString tableName);
+    static QString reader_sendTableDataRequest(QString tableName, int index);
+
+    //reader portable cows
+    static QString reader_sendCowRequest(QVariantMap data);
+    static QString reader_sendTaskRequest(QVariantMap data);
+    static QString reader_sendDescriptorRequest(QVariantMap data);
+    static QString reader_sendTaskInseminationRequest(QVariantMap data);
+    static QString reader_sendTaskVaccinationRequest(QVariantMap data);
+    static QString reader_sendTaskChangeLocationRequest(QVariantMap data);
+
+    static QString reader_sendVaccineRequest(QVariantMap data);
+    static QString reader_sendLocationRequest(QVariantMap data);
+
+    static QString reader_getTimeRequest();
+    static QString reader_sendTimeRequest(QString time);
+
+    //backend and reader portable communication
+    static QString backend_getCowRequest();
+    static QString backend_getIncommingTasksRequest();
+    static QString backend_sendTasks(QList<QVariantMap> data);
+
+private:
+    static QString sendLoraData(QString devEui, QString data);
+    static QString sendDeviceWsSettings(QString cmd, QVariantMap data);
+
+};
+
+#endif // COMMANDSGENERATOR_H
+
+Имя файла: DeviceDataParser.h
+
+#ifndef DEVICEDATAPARSER_H
+#define DEVICEDATAPARSER_H
+
+#include <QVariantMap>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
+#include <Application/Model/Constants/MilkStreamSensorDataConstants.h>
+#include <Application/Model/Constants/MilkQualityAnalizerDataConstants.h>
+#include <Application/Model/Constants/MilkMeterDataConstants.h>
+
+#include <Application/Model/Constants/LoraBSResponseTypes.h>
+#include <Application/Model/LoraDeviceModel.h>
+
+#include <Application/Model/Constants/BackendWSResponseTypes.h>
+#include <Application/Model/Data/TableModels/CowModel.h>
+#include <Application/Model/Data/TableModels/TaskModel.h>
+
+#include <Application/Model/Constants/ReaderPortableResponseTypes.h>
+
+#include <Application/Utils.h>
+
+#include <Application/Model/Data/ReaderEntities/Cow.h>
+#include <Application/Model/Data/ReaderEntities/Task.h>
+#include <Application/Model/Data/ReaderEntities/TableRows.h>
+#include <Application/Model/Data/ReaderEntities/Descriptor.h>
+
+#include <Application/Model/Constants/TaskActionType.h>
+
+class DeviceDataParser
+{
+public:
+    static QJsonObject primaryDataVerification(QString data, QString cmdDataType);
+
+    static QVariantMap parseMilkStreamSensor(QString data);
+    static QVariantMap parseMilkQualityAnalizer(QString data);
+    static QVariantMap parseMilkMeter(QString data);
+
+    //Lora
+    static QJsonObject primaryDataVerificationWS(QString data);
+    static LoraBSResponseTypes parseLoraBSData(QString data, QVariant* responseHandler);
+    static QVariantList parseLoraDeviceList(QJsonObject data);
+
+    //backend
+    static BackendWSResponseTypes parseBackendWSData(QString data, QVariant* responseHandler);
+    static QVariantList parseBackendCowList(QJsonObject data);
+    static QVariantList parseBackendTaskList(QJsonObject data);
+
+    //reader portable
+    static ReaderPortableResponseTypes parseReaderPortableData(QString data, QVariant* responseHandler);
+    static QVariantMap parseReaderPortableTableRows(QJsonObject data);
+    static QVariantMap parseReaderPortableCow(QJsonObject data);
+    static QVariantMap parseReaderPortableTask(QJsonObject data);
+    static QVariantMap parseReaderPortableDescriptor(QJsonObject data);
+    static QVariantMap parseReaderPortableDataStatus(QJsonObject data);
+private:
+    static QVariantMap parseBackendCow(QJsonObject data);
+};
+
+#endif // DEVICEDATAPARSER_H
+
+Имя файла: DriverSerial.h
+
+#ifndef DRIVERSERIAL_H
+#define DRIVERSERIAL_H
+
+#include <QObject>
+#include <QTimer>
+
+#include <QtSerialPort/QSerialPort>
+#include <QtSerialPort/QSerialPortInfo>
+
+#include <QDebug>
+
+class DriverSerial : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit DriverSerial(QObject *parent = nullptr);
+    DriverSerial();
+
+    void connectToPort(QString portName);
+    void disconnect();
+    void updateConnectedState();
+
+    void startReading();
+    void stopReading();
+
+    void sendData(QString data);
+
+    QList<QSerialPortInfo> getPortInfo();
+
+    bool connected() const;
+
+private:
+    QSerialPort m_serial;
+    bool m_connected = false;
+    bool m_reading = false;
+
+    QTimer m_timer;
+
+    void setConnected(bool newConnected);
+
+signals:
+    void stateChanged(bool connected);
+    void gotData(QString data);
+
+private slots:
+    void readyReadHandler();
+    void timerTimeout();
+};
+
+#endif // DRIVERSERIAL_H
+
+Имя файла: DriverNetwork.h
+
+#ifndef DRIVERNETWORK_H
+#define DRIVERNETWORK_H
+
+#include <QObject>
+
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+
+class DriverNetwork : public QObject
+{
+    Q_OBJECT
+public:
+    explicit DriverNetwork(QObject *parent = nullptr);
+    DriverNetwork();
+
+    void sendData(QNetworkRequest request, QString data);
+
+    void startReading();
+    void stopReading();
+
+private:
+    QNetworkAccessManager m_network;
+    bool m_connected = false;
+    bool m_reading = false;
+
+signals:
+    void gotData(QNetworkReply* reply);
+
+private slots:
+    void onResponse(QNetworkReply* reply);
+};
+
+#endif // DRIVERNETWORK_H
+
+Имя файла: main.py
+
+import os
+import argparse
+
+class Settings:
+    parser = argparse.ArgumentParser()
+
+    inputPath = os.path.abspath(os.getcwd())
+    outputFile = './code.txt'
+    ignorePaths = []
+    
+    file_extensions = ['.c', '.h', '.py']
+
+    def init_arguments(self):
+        self.parser.add_argument('-i', '--inputPath',       
+            help= f'Path with code. Default = {self.inputPath}')
+        
+        self.parser.add_argument('-o', '--outputFile',      
+            help= f'Full file path for output file. Default = {self.outputFile}')
+        
+        self.parser.add_argument('-e', '--fileExtentions', nargs='+',  
+            help= f'A list of file extentions. Ex: \"-e \'.c\' \'.cpp\' \'.h\'\". Default = {self.file_extensions}')
+        
+        self.parser.add_argument('-d', '--ignorePaths', nargs='+',  
+            help= f'A list of folders to ingore. Ex: \"-d \"./Debug\"\" Default = {self.ignorePaths}')
+
+        pass
+
+    def parse_arguments(self):
+        args = self.parser.parse_args()
+        if args.inputPath:
+            self.inputPath = args.inputPath
+
+        if args.outputFile:
+            self.outputFile = args.outputFile
+
+        if args.fileExtentions:
+            self.file_extensions = args.fileExtentions
+
+        if args.ignorePaths:
+            self.ignorePaths = args.ignorePaths
+        pass
+
+    def __init__(self) -> None:
+        self.init_arguments()
+        self.parse_arguments()
+
+class MainFunctionality:
+    def __init__(self, settings, outputFileDesc):
+        self.settings = settings
+        self.outputFileDesc = outputFileDesc
+        pass
+
+    def start_proccess(self):
+        self.readFolder(settings.inputPath)
+
+    def readFolder(self, folderPath):
+        #get folder content
+        folderContent = os.listdir(folderPath)
+
+        #for each element in folderContent
+        for dirElement in folderContent:
+            #create name for element 
+            pathName = folderPath + "/" + dirElement
+            #check if it file or folder. if file - write down file content
+            if os.path.isfile(pathName):
+                self.readFile(pathName, dirElement)
+            #if folrder - run this method again
+            else: self.readFolder(pathName)
+
+        pass
+
+    def readFile(self, filePath, place_in_folder):
+
+        if not self.apply_filters_on_file(filePath): return
+
+        file = open(filePath,'r', encoding="utf-8")
+        
+        self.outputFileDesc.write('\n'+'Имя файла: '+place_in_folder + '\n'+'\n')
+
+        for line in file:
+            self.outputFileDesc.write(line)
+        file.close()
+
+    def apply_filters_on_file(self, filePath):
+        filename, file_extension = os.path.splitext(filePath)
+
+        if file_extension in settings.file_extensions:
+            return True
+        
+        return False
+    
+    def apply_filters_on_folder(self, folderPath):
+        pass
+
+
+#entry point of app
+if __name__ == "__main__":
+
+    settings = Settings()
+    print("Settings: ")
+    print("inputPath:", settings.inputPath, "\nfileExtentions:", settings.file_extensions, 
+          "\noutputFile:", settings.outputFile, "\nignorePaths:", settings.ignorePaths)
+
+    _outputFile = open(settings.outputFile,'w')
+
+    func = MainFunctionality(settings, _outputFile)
+    #entry point of going through folder
+    func.start_proccess()
+
+    #closing output file. The end
+    _outputFile.close()
+
+    print(f'Programm finished it`s work. Result file is placed in {settings.outputFile}')
+
+
