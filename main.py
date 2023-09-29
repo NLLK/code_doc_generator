@@ -100,7 +100,7 @@ class MainFunctionality:
         #for each element in folderContent
         for dirElement in folderContent:
             #create name for element 
-            pathName = folderPath + "/" + dirElement
+            pathName = folderPath + os.path.sep + dirElement
             #check if it file or folder. if file - write down file content
             if os.path.isfile(pathName):
                 rel_path = os.path.relpath(pathName, self.settings.inputPath)
