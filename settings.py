@@ -1,6 +1,8 @@
 import argparse
 import os
 
+from main import FileExtentionPack
+
 class Settings:
     parser = argparse.ArgumentParser()
 
