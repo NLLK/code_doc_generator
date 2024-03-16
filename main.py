@@ -2,10 +2,6 @@ import os
 
 from settings import Settings
 
-class FileExtentionPack:
-    qtQml = ['.c', '.cpp', '.h', '.pro', '.qrc', '.qml', '.js']
-    simpleCpp = ['.c', '.cpp', '.h']
-
 class MainFunctionality:
     def __init__(self, settings, outputFileDesc):
         self.settings = settings

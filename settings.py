@@ -1,7 +1,9 @@
 import argparse
 import os
 
-from main import FileExtentionPack
+class FileExtentionPack:
+    qtQml = ['.c', '.cpp', '.h', '.pro', '.qrc', '.qml', '.js']
+    simpleCpp = ['.c', '.cpp', '.h']
 
 class Settings:
     parser = argparse.ArgumentParser()
