@@ -39,8 +39,12 @@ class MainFunctionality:
         #file name header
         self.outputFileDesc.write('\n'+'Имя файла: '+place_in_folder + '\n'+'\n')
 
-        for line in file:
-            self.outputFileDesc.write(line)
+        try:
+            for line in file:
+                self.outputFileDesc.write(line)
+        except:
+            print(f'Error occured in reading/writing file. File is: {filePath}')
+            
         file.close()
 
     def apply_filters_on_file(self, filePath):
@@ -75,7 +79,7 @@ if __name__ == "__main__":
     print("outputFile:", settings.outputFile)
     print("ignorePaths:", settings.ignorePaths)
 
-    _outputFile = open(settings.outputFile,'w')
+    _outputFile = open(settings.outputFile,'w', encoding='utf-8')
 
     func = MainFunctionality(settings, _outputFile)
     #entry point of going through folder

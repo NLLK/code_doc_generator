@@ -4,6 +4,7 @@ import os
 class FileExtentionPack:
     qtQml = ['.c', '.cpp', '.h', '.pro', '.qrc', '.qml', '.js']
     simpleCpp = ['.c', '.cpp', '.h']
+    qt = ['.c','.cpp','.h', '.ui', '.pro']
 
 class Settings:
     parser = argparse.ArgumentParser()
@@ -29,7 +30,7 @@ class Settings:
             help= f'A list of file extentions. Ex: \"-e \'.c\' \'.cpp\' \'.h\'\". Default = {self.file_extensions}')
         
         self.parser.add_argument('-p', '--fileExtentionPack', 
-            help= f'Predefined list of file extentions. Variants: qtQml, simpleCpp')
+            help= f'Predefined list of file extentions. Variants: qtQml, simpleCpp, qt')
         
         self.parser.add_argument('-d', '--ignorePaths', nargs='+',  
             help= f'A list of folders to ingore. Ex: \"-d \"./Debug\"\" Default = {self.ignorePaths}')
@@ -60,6 +61,9 @@ class Settings:
                 self.extentions_pack = args.fileExtentionPack
             elif "simpleCpp" in args.fileExtentionPack:
                 self.file_extensions = FileExtentionPack.simpleCpp
+                self.extentions_pack = args.fileExtentionPack
+            elif "qt" in args.fileExtentionPack:
+                self.file_extensions = FileExtentionPack.qt
                 self.extentions_pack = args.fileExtentionPack
 
         if args.encoding:
