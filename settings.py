@@ -5,6 +5,8 @@ class FileExtentionPack:
     qtQml = ['.c', '.cpp', '.h', '.pro', '.qrc', '.qml', '.js']
     simpleCpp = ['.c', '.cpp', '.h']
     qt = ['.c','.cpp','.h', '.ui', '.pro']
+    avr8 = ['.c','.h', '.cproj','.atsln']
+    stmCpp = ['.c', '.cpp', '.h', '.cproject','.project', '.ioc', '.ld', '.mxproject']
 
 class Settings:
     parser = argparse.ArgumentParser()
@@ -64,6 +66,12 @@ class Settings:
                 self.extentions_pack = args.fileExtentionPack
             elif "qt" in args.fileExtentionPack:
                 self.file_extensions = FileExtentionPack.qt
+                self.extentions_pack = args.fileExtentionPack
+            elif "avr8" in args.fileExtentionPack:
+                self.file_extensions = FileExtentionPack.avr8
+                self.extentions_pack = args.fileExtentionPack
+            elif "stmCpp" in args.fileExtentionPack:
+                self.file_extensions = FileExtentionPack.stmCpp
                 self.extentions_pack = args.fileExtentionPack
 
         if args.encoding:
